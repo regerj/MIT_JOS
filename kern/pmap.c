@@ -326,8 +326,19 @@ page_init(void)
 struct PageInfo *
 page_alloc(int alloc_flags)
 {
-	// Fill this function in
-	return 0;
+	if(!page_free_list)
+		return NULL;
+
+	struct PageInfo * allocatedPage;
+	allocatedPage = page_free_list;
+	page_free_list = page_free_list[0].pp_link;
+	allocatedPage[0].pp_link = NULL;
+	//assert(allocatedPage->pp_ref == 0);
+
+	if(alloc_flags & ALLOC_ZERO)
+		memset(page2kva(allocatedPage), '\0', PGSIZE);
+
+	return allocatedPage;
 }
 
 //
