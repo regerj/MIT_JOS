@@ -96,14 +96,27 @@ boot_alloc(uint32_t n)
 		extern char end[];
 		nextfree = ROUNDUP((char *) end, PGSIZE);
 	}
-
+	
 	// Allocate a chunk large enough to hold 'n' bytes, then update
 	// nextfree.  Make sure nextfree is kept aligned
 	// to a multiple of PGSIZE.
 	//
 	// LAB 2: Your code here.
 
-	return NULL;
+	// Calculate the liberal page count to hold the n bytes
+	if(n == 0)
+		return nextfree;
+
+	void * nextfree_buffer = NULL;
+	nextfree_buffer = nextfree;
+	nextfree += n;
+
+	if(PADDR(nextfree) > npages * PGSIZE)
+		panic("boot_alloc: Attempting to allocatate too much memory!\n");
+
+	nextfree = ROUNDUP(nextfree, PGSIZE);
+
+	return nextfree_buffer;
 }
 
 // Set up a two-level page table:
@@ -125,7 +138,7 @@ mem_init(void)
 	i386_detect_memory();
 
 	// Remove this line when you're ready to test this function.
-	panic("mem_init: This function is not finished\n");
+	// panic("mem_init: This function is not finished\n");
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -149,6 +162,8 @@ mem_init(void)
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
 
+	pages = boot_alloc(npages * sizeof(struct PageInfo));
+	memset(pages, 0, npages * sizeof(struct PageInfo));
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -251,8 +266,45 @@ page_init(void)
 	// Change the code to reflect this.
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
+
+	// Allocate the first page
+	pages[0].pp_ref = 1;
+	pages[0].pp_link = NULL;
+
+	// Initialize the i and iterate the basemem and add them to the free list
 	size_t i;
-	for (i = 0; i < npages; i++) {
+	for (i = 1; i < npages_basemem; i++) {
+		pages[i].pp_ref = 0;
+		pages[i].pp_link = page_free_list;
+		page_free_list = &pages[i];
+	}
+
+	// At this point, npages_basemem * PGSIZE == IOPHYSMEM
+
+	// Calculate the number of pages in the IO hole
+	size_t npages_io = (EXTPHYSMEM - IOPHYSMEM) / PGSIZE;
+
+	// Iterate the IO hole here and prevent it from being allocated
+	for(; i < npages_basemem + npages_io; i++)
+	{
+		pages[i].pp_ref = 1;
+		pages[i].pp_link = NULL;
+	}
+
+	// Find the first unallocated page
+	size_t npages_preallocated = (size_t) (PADDR(boot_alloc(0)) - npages_io - npages_basemem) / PGSIZE;
+
+	// Allocate the used pages, this could be added to above iteration
+	// but is kept seperate for clarity
+	for(; i < npages_preallocated + npages_basemem + npages_io; i++)
+	{
+		pages[i].pp_ref = 1;
+		pages[i].pp_link = NULL;
+	}
+
+	// Add the remaining pages to the free list
+	for(; i < npages; i++)
+	{
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
