@@ -326,15 +326,20 @@ page_init(void)
 struct PageInfo *
 page_alloc(int alloc_flags)
 {
+	// If there are no free pages, return NULL
 	if(!page_free_list)
 		return NULL;
 
+	// Allocate a page
 	struct PageInfo * allocatedPage;
 	allocatedPage = page_free_list;
 	page_free_list = page_free_list[0].pp_link;
 	allocatedPage[0].pp_link = NULL;
-	//assert(allocatedPage->pp_ref == 0);
 
+	// Just make sure nothing went wrong somwhere else lol
+	assert(allocatedPage->pp_ref == 0);
+
+	// If the caller requested a zero out, do so
 	if(alloc_flags & ALLOC_ZERO)
 		memset(page2kva(allocatedPage), '\0', PGSIZE);
 
@@ -351,6 +356,14 @@ page_free(struct PageInfo *pp)
 	// Fill this function in
 	// Hint: You may want to panic if pp->pp_ref is nonzero or
 	// pp->pp_link is not NULL.
+
+	// Ensure that pp->ppref is zero and pp->pp_link is null
+	assert(!(pp->pp_ref));
+	assert(!(pp->pp_link));
+
+	// Add pp to the head of page_free_list
+	pp->pp_link = page_free_list;
+	page_free_list = pp;
 }
 
 //
