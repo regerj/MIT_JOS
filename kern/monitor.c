@@ -31,7 +31,8 @@ static struct Command commands[] = {
 
 /***** Implementations of basic kernel monitor commands *****/
 
-int mon_show(int argc, char **argv, struct Trapframe *tf)
+int 
+mon_show(int argc, char **argv, struct Trapframe *tf)
 {
 	// cprintf("\033[0;30m"); 	// Black
 	// cprintf("\033[0;31m"); 	// Red
@@ -42,7 +43,8 @@ int mon_show(int argc, char **argv, struct Trapframe *tf)
 	// cprintf("\033[0;36m"); 	// Cyan
 	// cprintf("\033[0;37m"); 	// White
 
-	int printOS2()
+	int 
+	printOS2(void)
 	{
 		cprintf(" ________  ________    _______     \n");
 		cprintf("|\\   __  \\|\\   ____\\  /  ___  \\    \n");
@@ -55,7 +57,8 @@ int mon_show(int argc, char **argv, struct Trapframe *tf)
 		return 0;
 	}
 
-	int printCat()
+	int 
+	printCat()
 	{
 		cprintf("            *     ,MMM8&&&.            *\n");
 		cprintf("                  MMMM88&&&&&    .\n");
@@ -143,7 +146,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	ebp = (uint32_t *)read_ebp();
 
 	// Set a loop to iterate the ebps until you hit base.
-	while(ebp != 0x00000000)
+	while (ebp != 0x00000000)
 	{
 		cprintf("ebp %08x eip %08x args %08x %08x %08x %08x %08x\n", (int)ebp, (int)*(ebp + 1), 
 				(int)*(ebp + 2), (int)*(ebp + 3), (int)*(ebp + 4), (int)*(ebp + 5), 
