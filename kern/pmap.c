@@ -104,18 +104,22 @@ boot_alloc(uint32_t n)
 	// LAB 2: Your code here.
 
 	// Calculate the liberal page count to hold the n bytes
-	if(n == 0)
+	if (n == 0)
 		return nextfree;
 
+	// Grab a page off of nextfree and update it
 	void * nextfree_buffer = NULL;
 	nextfree_buffer = nextfree;
 	nextfree += n;
 
-	if(PADDR(nextfree) > npages * PGSIZE)
+	// Panic if science has gone toooooooo far
+	if (PADDR(nextfree) > npages * PGSIZE)
 		panic("boot_alloc: Attempting to allocatate too much memory!\n");
 
+	// Ensure that nextfree is aligned with a page
 	nextfree = ROUNDUP(nextfree, PGSIZE);
 
+	// Return an address to the allocated memory chunk
 	return nextfree_buffer;
 }
 
@@ -273,7 +277,8 @@ page_init(void)
 
 	// Initialize the i and iterate the basemem and add them to the free list
 	size_t i;
-	for (i = 1; i < npages_basemem; i++) {
+	for (i = 1; i < npages_basemem; i++) 
+	{
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
@@ -285,7 +290,7 @@ page_init(void)
 	size_t npages_io = (EXTPHYSMEM - IOPHYSMEM) / PGSIZE;
 
 	// Iterate the IO hole here and prevent it from being allocated
-	for(; i < npages_basemem + npages_io; i++)
+	for (; i < npages_basemem + npages_io; i++)
 	{
 		pages[i].pp_ref = 1;
 		pages[i].pp_link = NULL;
@@ -296,14 +301,14 @@ page_init(void)
 
 	// Allocate the used pages, this could be added to above iteration
 	// but is kept seperate for clarity
-	for(; i < npages_preallocated + npages_basemem + npages_io; i++)
+	for (; i < npages_preallocated + npages_basemem + npages_io; i++)
 	{
 		pages[i].pp_ref = 1;
 		pages[i].pp_link = NULL;
 	}
 
 	// Add the remaining pages to the free list
-	for(; i < npages; i++)
+	for (; i < npages; i++)
 	{
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
@@ -327,7 +332,7 @@ struct PageInfo *
 page_alloc(int alloc_flags)
 {
 	// If there are no free pages, return NULL
-	if(!page_free_list)
+	if (!page_free_list)
 		return NULL;
 
 	// Allocate a page
@@ -340,7 +345,7 @@ page_alloc(int alloc_flags)
 	assert(allocatedPage->pp_ref == 0);
 
 	// If the caller requested a zero out, do so
-	if(alloc_flags & ALLOC_ZERO)
+	if (alloc_flags & ALLOC_ZERO)
 		memset(page2kva(allocatedPage), '\0', PGSIZE);
 
 	return allocatedPage;
