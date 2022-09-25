@@ -5,7 +5,6 @@
 #include <inc/error.h>
 #include <inc/string.h>
 #include <inc/assert.h>
-#include <inc/memlayout.h>
 
 #include <kern/pmap.h>
 #include <kern/kclock.h>
@@ -420,7 +419,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		physaddr_t pde_pa = PTE_ADDR(pde);
 
 		// Now turn it into a kernel address
-		struct PageInfo * pde_ka = KADDR(pde_pa);
+		pde_t * pde_ka = KADDR(pde_pa);
 
 		// Here we index the page table based on the va supplied which
 		// results in a pte. Since we want a pointer to a pte we return
@@ -438,13 +437,23 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 			return NULL;
 		
 		// Increment pp_ref to show that we are placing an entry into
-		// the pd
+		// the page directory
 		new_pde->pp_ref++;
+
+		// Create a new pde 
 		pde = page2pa(new_pde) | PTE_P | PTE_U | PTE_W;
+
+		// Update the page dir to contain a pagetable at that index
 		pgdir[PDX(va)] = pde;
-		physaddr_t pte_pa = PTE_ADDR(pde);
-		pde_t * pte_va = KADDR(pte_pa);
-		return &pte_va[PTX(va)];
+
+		// Get the pysical address from the new pt
+		physaddr_t pt_pa = PTE_ADDR(pde);
+
+		// Turn it into a kernel virtual addrss
+		pde_t * pt_va = KADDR(pt_pa);
+
+		// Return a pointer to the page
+		return &pt_va[PTX(va)];
 	}
 
 	return NULL;
@@ -464,7 +473,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+	
 }
 
 //
