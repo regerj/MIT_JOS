@@ -338,8 +338,8 @@ page_alloc(int alloc_flags)
 	// Allocate a page
 	struct PageInfo * allocatedPage;
 	allocatedPage = page_free_list;
-	page_free_list = page_free_list[0].pp_link;
-	allocatedPage[0].pp_link = NULL;
+	page_free_list = page_free_list->pp_link;
+	allocatedPage->pp_link = NULL;
 
 	// Just make sure nothing went wrong somwhere else lol
 	assert(allocatedPage->pp_ref == 0);
@@ -446,14 +446,14 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		// Update the page dir to contain a pagetable at that index
 		pgdir[PDX(va)] = pde;
 
-		// Get the pysical address from the new pt
+		// PTE_ADDR masks the flags on the PTE to retrieve the PPN
 		physaddr_t pt_pa = PTE_ADDR(pde);
 
-		// Turn it into a kernel virtual addrss
-		pde_t * pt_va = KADDR(pt_pa);
+		// Turn PPN into a kva
+		pde_t * pt_ka = KADDR(pt_pa);
 
 		// Return a pointer to the page
-		return &pt_va[PTX(va)];
+		return &pt_ka[PTX(va)];
 	}
 
 	return NULL;
@@ -473,7 +473,18 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	
+	int num_pages = size / PGSIZE;
+	for (int i = 0; i < num_pages; i++)
+	{
+		// Retrieve a pointer to the pte we want to populate
+		pte_t * new_page = pgdir_walk(pgdir, (void *)(va + i * PGSIZE), true);
+		
+		// Just a lil safety :)
+		assert(new_page != NULL);
+
+		// Populate the pte by ensuring mask for flags and adding flags
+		*new_page = PTE_ADDR(pa) | PTE_P | perm;
+	}
 }
 
 //
