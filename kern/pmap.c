@@ -5,6 +5,7 @@
 #include <inc/error.h>
 #include <inc/string.h>
 #include <inc/assert.h>
+#include <inc/memlayout.h>
 
 #include <kern/pmap.h>
 #include <kern/kclock.h>
@@ -407,7 +408,45 @@ page_decref(struct PageInfo* pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
+	// Retrieve the page directory entry for the given linear address VA
+	// First uses PDX to retrieve the page directory index from va then
+	// indexes pgdir with that index
+	pde_t pde = pgdir[PDX(va)];
+
+	// If the page table entry present flag is set, pde is valid
+	if (pde & PTE_P)
+	{
+		// Retrieve physical address of the pde
+		physaddr_t pde_pa = PTE_ADDR(pde);
+
+		// Now turn it into a kernel address
+		struct PageInfo * pde_ka = KADDR(pde_pa);
+
+		// Here we index the page table based on the va supplied which
+		// results in a pte. Since we want a pointer to a pte we return
+		// & of pte
+		return &pde_ka[PTX(va)];
+	}
+	else if (create)
+	{
+		// If no such page table exists and we can create one, create 
+		// a new pde
+		struct PageInfo * new_pde = NULL;
+		new_pde = page_alloc(ALLOC_ZERO);
+
+		if (!new_pde)
+			return NULL;
+		
+		// Increment pp_ref to show that we are placing an entry into
+		// the pd
+		new_pde->pp_ref++;
+		pde = page2pa(new_pde) | PTE_P | PTE_U | PTE_W;
+		pgdir[PDX(va)] = pde;
+		physaddr_t pte_pa = PTE_ADDR(pde);
+		pde_t * pte_va = KADDR(pte_pa);
+		return &pte_va[PTX(va)];
+	}
+
 	return NULL;
 }
 
