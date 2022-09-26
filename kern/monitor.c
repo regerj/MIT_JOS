@@ -157,8 +157,8 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 		debuginfo_eip((uintptr_t)(*(ebp + 1)), &info);
 
 		// Print it all pretty like
-		cprintf("Line number: %d", info.eip_line);
-		cprintf("\t%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, (ebp - ebp[1]));
+		// cprintf("Line number: %d", info.eip_line);
+		cprintf("\t%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, (ebp[1] - info.eip_fn_addr));
 		ebp = (uint32_t *)*ebp;
 	}
 
