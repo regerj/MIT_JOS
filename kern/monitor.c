@@ -31,7 +31,8 @@ static struct Command commands[] = {
 
 /***** Implementations of basic kernel monitor commands *****/
 
-int mon_show(int argc, char **argv, struct Trapframe *tf)
+int 
+mon_show(int argc, char **argv, struct Trapframe *tf)
 {
 	// cprintf("\033[0;30m"); 	// Black
 	// cprintf("\033[0;31m"); 	// Red
@@ -42,7 +43,8 @@ int mon_show(int argc, char **argv, struct Trapframe *tf)
 	// cprintf("\033[0;36m"); 	// Cyan
 	// cprintf("\033[0;37m"); 	// White
 
-	int printOS2()
+	int 
+	printOS2(void)
 	{
 		cprintf(" ________  ________    _______     \n");
 		cprintf("|\\   __  \\|\\   ____\\  /  ___  \\    \n");
@@ -55,7 +57,8 @@ int mon_show(int argc, char **argv, struct Trapframe *tf)
 		return 0;
 	}
 
-	int printCat()
+	int 
+	printCat()
 	{
 		cprintf("            *     ,MMM8&&&.            *\n");
 		cprintf("                  MMMM88&&&&&    .\n");
@@ -154,8 +157,8 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 		debuginfo_eip((uintptr_t)(*(ebp + 1)), &info);
 
 		// Print it all pretty like
-		cprintf("Line number: %d", info.eip_line);
-		cprintf("\t%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, (ebp - ebp[1]));
+		// cprintf("Line number: %d", info.eip_line);
+		cprintf("\t%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, (ebp[1] - info.eip_fn_addr));
 		ebp = (uint32_t *)*ebp;
 	}
 
