@@ -563,8 +563,22 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-	// Fill this function in
-	return NULL;
+	// Grab the address of the requested pte but do not create it if
+	// missing.
+	pte_t * p_pte = pgdir_walk(pgdir, va, false);
+
+	// If it was not found, return NULL.
+	if (!p_pte)
+		return NULL;
+
+	// If pte_store exists, store it.
+	if(pte_store)
+		*pte_store = p_pte;
+
+	// Grab the physical address and return the PageInfo struct from that 
+	// address.
+	physaddr_t pte_pa = PTE_ADDR(p_pte);
+	return pa2page(pte_pa);
 }
 
 //
