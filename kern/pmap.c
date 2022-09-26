@@ -515,7 +515,37 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	// Fill this function in
+	// Walk pgdir
+	pte_t * p_pte = pgdir_walk(pgdir, va, true);
+
+	// If it cannot be allocated return -E_NO_MEM
+	if (!p_pte)
+	{
+		return -E_NO_MEM;
+	}
+	// If the page is already present
+	else if (PTE_ADDR(p_pte) == page2pa(pp))
+	{
+		// If the perms are diff
+		if((*p_pte & 0xfff) != perm)
+		{
+			// Set perms, could replace page2pa(pp) with PTE_ADDR(p_pte)
+			*p_pte = page2pa(pp) | perm | PTE_P;
+			tlb_invalidate(pgdir, va);
+		}
+	}
+	// Otherwise
+	else
+	{
+		// If there is a page remove it
+		if (*p_pte & PTE_P)
+			page_remove(pgdir, va);
+
+		// Set the new page in its place and increment pp_ref, invalidate
+		pp->pp_ref++;
+		*p_pte = page2pa(pp) | perm | PTE_P;
+		tlb_invalidate(pgdir, va);
+	}
 	return 0;
 }
 
