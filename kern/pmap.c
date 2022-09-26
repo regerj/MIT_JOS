@@ -342,7 +342,7 @@ page_alloc(int alloc_flags)
 	allocatedPage->pp_link = NULL;
 
 	// Just make sure nothing went wrong somwhere else lol
-	assert(allocatedPage->pp_ref == 0);
+	//assert(allocatedPage->pp_ref == 0);
 
 	// If the caller requested a zero out, do so
 	if (alloc_flags & ALLOC_ZERO)
@@ -363,8 +363,8 @@ page_free(struct PageInfo *pp)
 	// pp->pp_link is not NULL.
 
 	// Ensure that pp->ppref is zero and pp->pp_link is null
-	assert(!(pp->pp_ref));
-	assert(!(pp->pp_link));
+	if(pp->pp_ref != 0 || pp->pp_link != NULL)
+		panic("page_free: Cannot free referenced or already free memory!");
 
 	// Add pp to the head of page_free_list
 	pp->pp_link = page_free_list;
@@ -524,7 +524,7 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 		return -E_NO_MEM;
 	}
 	// If the page is already present
-	else if (PTE_ADDR(p_pte) == page2pa(pp))
+	else if (PTE_ADDR(*p_pte) == page2pa(pp))
 	{
 		// If the perms are diff
 		if((*p_pte & 0xfff) != perm)
@@ -542,8 +542,9 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 			page_remove(pgdir, va);
 
 		// Set the new page in its place and increment pp_ref, invalidate
-		pp->pp_ref++;
+		
 		*p_pte = page2pa(pp) | perm | PTE_P;
+		pp->pp_ref++;
 		tlb_invalidate(pgdir, va);
 	}
 	return 0;
@@ -577,7 +578,7 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 
 	// Grab the physical address and return the PageInfo struct from that 
 	// address.
-	physaddr_t pte_pa = PTE_ADDR(p_pte);
+	physaddr_t pte_pa = PTE_ADDR(*p_pte);
 	return pa2page(pte_pa);
 }
 
@@ -599,7 +600,20 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// Fill this function in
+	// Lookup the requested page
+	pte_t * p_pte;
+	struct PageInfo * p_pi = page_lookup(pgdir, va, &p_pte);
+
+	// If it was found
+	if(p_pi)
+	{
+		// Zero the address
+		*p_pte = 0;
+
+		// Decref/free and invalidate
+		page_decref(p_pi);
+		tlb_invalidate(pgdir, va);
+	}
 }
 
 //
