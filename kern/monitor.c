@@ -31,6 +31,45 @@ static struct Command commands[] = {
 
 /***** Implementations of basic kernel monitor commands *****/
 
+void
+printOS2()
+{
+	cprintf(" ________  ________    _______     \n");
+	cprintf("|\\   __  \\|\\   ____\\  /  ___  \\    \n");
+	cprintf("\\ \\  \\|\\  \\ \\  \\___|_/__/|_/  /|   \n");
+	cprintf(" \\ \\  \\\\\\  \\ \\_____  \\__|//  / /   \n");
+	cprintf("  \\ \\  \\\\\\  \\|____|\\  \\  /  /_/__  \n");
+	cprintf("   \\ \\_______\\____\\_\\  \\|\\________\\\n");
+	cprintf("    \\|_______|\\_________\\\\|_______|\n");
+	cprintf("             \\|_________|          \n");
+}
+
+void 
+printCat(void)
+{
+	cprintf("            *     ,MMM8&&&.            *\n");
+	cprintf("                  MMMM88&&&&&    .\n");
+	cprintf("                 MMMM88&&&&&&&\n");
+	cprintf("     *           MMM88&&&&&&&&\n");
+	cprintf("                 MMM88&&&&&&&&\n");
+	cprintf("                 'MMM88&&&&&&'\n");
+	cprintf("                   'MMM8&&&'      *    \n");
+	cprintf("          |\\___/|     /\\___/\\\n");
+	cprintf("          )     (     )    ~( .              '\n");
+	cprintf("         =\\     /=   =\\~    /=\n");
+	cprintf("           )===(       ) ~ (\n");
+	cprintf("          /     \\     /     \\\n");
+	cprintf("          |     |     ) ~   (\n");
+	cprintf("         /       \\   /     ~ \\\n");
+	cprintf("         \\       /   \\~     ~/\n");
+	cprintf("  /\\_/\\_/\\__  _/_/\\_/\\__~__/_/\\_/\\_/\\_/\\_/\\_\n");
+	cprintf("  |  |  |  |( (  |  |  | ))  |  |  |  |  |  |\n");
+	cprintf("  |  |  |  | ) ) |  |  |//|  |  |  |  |  |  |\n");
+	cprintf("  |  |  |  |(_(  |  |  (( |  |  |  |  |  |  |\n");
+	cprintf("  |  |  |  |  |  |  |  |\\)|  |  |  |  |  |  |\n");
+	cprintf("  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |\n");
+}
+
 int 
 mon_show(int argc, char **argv, struct Trapframe *tf)
 {
@@ -42,47 +81,6 @@ mon_show(int argc, char **argv, struct Trapframe *tf)
 	// cprintf("\033[0;35m"); 	// Purple
 	// cprintf("\033[0;36m"); 	// Cyan
 	// cprintf("\033[0;37m"); 	// White
-
-	int 
-	printOS2(void)
-	{
-		cprintf(" ________  ________    _______     \n");
-		cprintf("|\\   __  \\|\\   ____\\  /  ___  \\    \n");
-		cprintf("\\ \\  \\|\\  \\ \\  \\___|_/__/|_/  /|   \n");
-		cprintf(" \\ \\  \\\\\\  \\ \\_____  \\__|//  / /   \n");
-		cprintf("  \\ \\  \\\\\\  \\|____|\\  \\  /  /_/__  \n");
-		cprintf("   \\ \\_______\\____\\_\\  \\|\\________\\\n");
-		cprintf("    \\|_______|\\_________\\\\|_______|\n");
-		cprintf("             \\|_________|          \n");
-		return 0;
-	}
-
-	int 
-	printCat()
-	{
-		cprintf("            *     ,MMM8&&&.            *\n");
-		cprintf("                  MMMM88&&&&&    .\n");
-		cprintf("                 MMMM88&&&&&&&\n");
-		cprintf("     *           MMM88&&&&&&&&\n");
-		cprintf("                 MMM88&&&&&&&&\n");
-		cprintf("                 'MMM88&&&&&&'\n");
-		cprintf("                   'MMM8&&&'      *    \n");
-		cprintf("          |\\___/|     /\\___/\\\n");
-		cprintf("          )     (     )    ~( .              '\n");
-		cprintf("         =\\     /=   =\\~    /=\n");
-		cprintf("           )===(       ) ~ (\n");
-		cprintf("          /     \\     /     \\\n");
-		cprintf("          |     |     ) ~   (\n");
-		cprintf("         /       \\   /     ~ \\\n");
-		cprintf("         \\       /   \\~     ~/\n");
-		cprintf("  /\\_/\\_/\\__  _/_/\\_/\\__~__/_/\\_/\\_/\\_/\\_/\\_\n");
-		cprintf("  |  |  |  |( (  |  |  | ))  |  |  |  |  |  |\n");
-		cprintf("  |  |  |  | ) ) |  |  |//|  |  |  |  |  |  |\n");
-		cprintf("  |  |  |  |(_(  |  |  (( |  |  |  |  |  |  |\n");
-		cprintf("  |  |  |  |  |  |  |  |\\)|  |  |  |  |  |  |\n");
-		cprintf("  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |\n");
-		return 0;
-	}
 
 	cprintf("\033[0;31m"); 	// Red
 	printOS2();
