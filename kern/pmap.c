@@ -494,6 +494,7 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 		*new_page = (pa + i * PGSIZE) | PTE_P | perm;
 	}
 }
+// Test
 
 //
 // Map the physical page 'pp' at virtual address 'va'.
