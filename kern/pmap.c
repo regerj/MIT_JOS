@@ -305,7 +305,7 @@ page_init(void)
 	}
 
 	// Find the first unallocated page
-	size_t npages_preallocated = (size_t) (PADDR(boot_alloc(0)) - npages_io - npages_basemem) / PGSIZE;
+	size_t npages_preallocated = (size_t) ((PADDR(boot_alloc(0)) / PGSIZE) - npages_io - npages_basemem);
 
 	// Allocate the used pages, this could be added to above iteration
 	// but is kept seperate for clarity
@@ -529,33 +529,39 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 
 	// If it cannot be allocated return -E_NO_MEM
 	if (!p_pte)
-	{
 		return -E_NO_MEM;
-	}
-	// If the page is already present
-	else if (PTE_ADDR(*p_pte) == page2pa(pp))
-	{
-		// If the perms are diff
-		if((*p_pte & 0xfff) != perm)
-		{
-			// Set perms, could replace page2pa(pp) with PTE_ADDR(p_pte)
-			*p_pte = page2pa(pp) | perm | PTE_P;
-			tlb_invalidate(pgdir, va);
-		}
-	}
-	// Otherwise
-	else
-	{
-		// If there is a page remove it
-		if (*p_pte & PTE_P)
-			page_remove(pgdir, va);
 
-		// Set the new page in its place and increment pp_ref, invalidate
+	// If the page is already present
+	// else if (PTE_ADDR(*p_pte) == page2pa(pp))
+	// {
+	// 	// If the perms are diff
+	// 	if((*p_pte & 0xfff) != perm)
+	// 	{
+	// 		// Set perms, could replace page2pa(pp) with PTE_ADDR(p_pte)
+	// 		*p_pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
+	// 		tlb_invalidate(pgdir, va);
+	// 	}
+	// }
+	// // Otherwise
+	// else
+	// {
+	// 	// If there is a page remove it
+	// 	if (*p_pte & PTE_P)
+	// 		page_remove(pgdir, va);
+
+	// 	// Set the new page in its place and increment pp_ref, invalidate
 		
-		*p_pte = page2pa(pp) | perm | PTE_P;
-		pp->pp_ref++;
-		tlb_invalidate(pgdir, va);
-	}
+	// 	*p_pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
+	// 	pp->pp_ref++;
+	// 	tlb_invalidate(pgdir, va);
+	// }
+
+	pp->pp_ref++;
+	if(*p_pte & PTE_P)
+		page_remove(pgdir, va);
+	
+	*p_pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
+	tlb_invalidate(pgdir, va);
 	return 0;
 }
 
