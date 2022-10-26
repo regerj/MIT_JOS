@@ -26,9 +26,86 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "show", "Show a cute animation :)", mon_show },
+	{ "backtrace", "Display a stack backtrace", mon_backtrace },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
+
+void
+printOS2()
+{
+	cprintf(" ________  ________    _______     \n");
+	cprintf("|\\   __  \\|\\   ____\\  /  ___  \\    \n");
+	cprintf("\\ \\  \\|\\  \\ \\  \\___|_/__/|_/  /|   \n");
+	cprintf(" \\ \\  \\\\\\  \\ \\_____  \\__|//  / /   \n");
+	cprintf("  \\ \\  \\\\\\  \\|____|\\  \\  /  /_/__  \n");
+	cprintf("   \\ \\_______\\____\\_\\  \\|\\________\\\n");
+	cprintf("    \\|_______|\\_________\\\\|_______|\n");
+	cprintf("             \\|_________|          \n");
+}
+
+void 
+printCat(void)
+{
+	cprintf("            *     ,MMM8&&&.            *\n");
+	cprintf("                  MMMM88&&&&&    .\n");
+	cprintf("                 MMMM88&&&&&&&\n");
+	cprintf("     *           MMM88&&&&&&&&\n");
+	cprintf("                 MMM88&&&&&&&&\n");
+	cprintf("                 'MMM88&&&&&&'\n");
+	cprintf("                   'MMM8&&&'      *    \n");
+	cprintf("          |\\___/|     /\\___/\\\n");
+	cprintf("          )     (     )    ~( .              '\n");
+	cprintf("         =\\     /=   =\\~    /=\n");
+	cprintf("           )===(       ) ~ (\n");
+	cprintf("          /     \\     /     \\\n");
+	cprintf("          |     |     ) ~   (\n");
+	cprintf("         /       \\   /     ~ \\\n");
+	cprintf("         \\       /   \\~     ~/\n");
+	cprintf("  /\\_/\\_/\\__  _/_/\\_/\\__~__/_/\\_/\\_/\\_/\\_/\\_\n");
+	cprintf("  |  |  |  |( (  |  |  | ))  |  |  |  |  |  |\n");
+	cprintf("  |  |  |  | ) ) |  |  |//|  |  |  |  |  |  |\n");
+	cprintf("  |  |  |  |(_(  |  |  (( |  |  |  |  |  |  |\n");
+	cprintf("  |  |  |  |  |  |  |  |\\)|  |  |  |  |  |  |\n");
+	cprintf("  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |\n");
+}
+
+int 
+mon_show(int argc, char **argv, struct Trapframe *tf)
+{
+	// cprintf("\033[0;30m"); 	// Black
+	// cprintf("\033[0;31m"); 	// Red
+	// cprintf("\033[0;32m"); 	// Green
+	// cprintf("\033[0;33m"); 	// Yellow
+	// cprintf("\033[0;34m"); 	// Blue
+	// cprintf("\033[0;35m"); 	// Purple
+	// cprintf("\033[0;36m"); 	// Cyan
+	// cprintf("\033[0;37m"); 	// White
+
+	cprintf("\033[0;31m"); 	// Red
+	printOS2();
+	printCat();
+	cprintf("\033[0;32m"); 	// Green
+	printOS2();
+	printCat();
+	cprintf("\033[0;33m"); 	// Yellow
+	printOS2();
+	printCat();
+	cprintf("\033[0;34m"); 	// Blue
+	printOS2();
+	printCat();
+	cprintf("\033[0;35m"); 	// Purple
+	printOS2();
+	printCat();
+	cprintf("\033[0;36m"); 	// Cyan
+	printOS2();
+	printCat();
+	cprintf("\033[0;37m"); 	// White
+	printOS2();
+	printCat();
+	return 0;
+}
 
 int
 mon_help(int argc, char **argv, struct Trapframe *tf)
@@ -62,6 +139,28 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	// LAB 1: Your code here.
     // HINT 1: use read_ebp().
     // HINT 2: print the current ebp on the first line (not current_ebp[0])
+
+	// Declare and read in the ebp
+	uint32_t * ebp;
+	ebp = (uint32_t *)read_ebp();
+
+	// Set a loop to iterate the ebps until you hit base.
+	while (ebp != 0x00000000)
+	{
+		cprintf("ebp %08x eip %08x args %08x %08x %08x %08x %08x\n", (int)ebp, (int)*(ebp + 1), 
+				(int)*(ebp + 2), (int)*(ebp + 3), (int)*(ebp + 4), (int)*(ebp + 5), 
+				(int)*(ebp + 6));
+
+		// Create and retrieve an info struct for the current eip (*(ebp + 1))
+		struct Eipdebuginfo info;
+		debuginfo_eip((uintptr_t)(*(ebp + 1)), &info);
+
+		// Print it all pretty like
+		// cprintf("Line number: %d", info.eip_line);
+		cprintf("\t%s:%d: %.*s+%d\n", info.eip_file, info.eip_line, info.eip_fn_namelen, info.eip_fn_name, (ebp[1] - info.eip_fn_addr));
+		ebp = (uint32_t *)*ebp;
+	}
+
 	return 0;
 }
 
