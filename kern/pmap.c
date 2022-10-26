@@ -144,6 +144,7 @@ mem_init(void)
 	// Remove this line when you're ready to test this function.
 	// panic("mem_init: This function is not finished\n");
 
+
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
@@ -461,6 +462,14 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		pde_t * pt_ka = KADDR(pt_pa);
 
 		// Return a pointer to the page
+
+		// pte_t * wtfamidoing = &pt_ka[PTX(va)];
+		// uint32_t top10 = PDX(wtfamidoing);
+		// uint32_t mid10 = PTX(wtfamidoing);
+		// uint32_t bot12 = PGOFF(wtfamidoing);
+
+		// return PGADDR(top10, mid10, bot12);
+
 		return &pt_ka[PTX(va)];
 	}
 
@@ -482,6 +491,7 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	int num_pages = size / PGSIZE;
+
 	for (int i = 0; i < num_pages; i++)
 	{
 		// Retrieve a pointer to the pte we want to populate
@@ -612,6 +622,7 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 // Hint: The TA solution is implemented using page_lookup,
 // 	tlb_invalidate, and page_decref.
 //
+
 void
 page_remove(pde_t *pgdir, void *va)
 {
