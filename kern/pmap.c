@@ -144,6 +144,7 @@ mem_init(void)
 	// Remove this line when you're ready to test this function.
 	// panic("mem_init: This function is not finished\n");
 
+
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
@@ -192,6 +193,8 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 
+	boot_map_region(kern_pgdir, UPAGES, PTSIZE, PADDR(pages), PTE_U | PTE_P);
+
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
 	// stack.  The kernel stack grows down from virtual address KSTACKTOP.
@@ -204,6 +207,10 @@ mem_init(void)
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
 
+	uintptr_t kstack = KSTACKTOP - KSTKSIZE;
+
+	boot_map_region(kern_pgdir, kstack, KSTKSIZE, PADDR(bootstack), PTE_P | PTE_W);
+
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
 	// Ie.  the VA range [KERNBASE, 2^32) should map to
@@ -212,6 +219,8 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
+
+	boot_map_region(kern_pgdir, KERNBASE, 0x10000000, 0, PTE_P | PTE_W);
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -297,7 +306,7 @@ page_init(void)
 	}
 
 	// Find the first unallocated page
-	size_t npages_preallocated = (size_t) (PADDR(boot_alloc(0)) - npages_io - npages_basemem) / PGSIZE;
+	size_t npages_preallocated = (size_t) ((PADDR(boot_alloc(0)) / PGSIZE) - npages_io - npages_basemem);
 
 	// Allocate the used pages, this could be added to above iteration
 	// but is kept seperate for clarity
@@ -453,6 +462,14 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		pde_t * pt_ka = KADDR(pt_pa);
 
 		// Return a pointer to the page
+
+		// pte_t * wtfamidoing = &pt_ka[PTX(va)];
+		// uint32_t top10 = PDX(wtfamidoing);
+		// uint32_t mid10 = PTX(wtfamidoing);
+		// uint32_t bot12 = PGOFF(wtfamidoing);
+
+		// return PGADDR(top10, mid10, bot12);
+
 		return &pt_ka[PTX(va)];
 	}
 
@@ -474,6 +491,7 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	int num_pages = size / PGSIZE;
+
 	for (int i = 0; i < num_pages; i++)
 	{
 		// Retrieve a pointer to the pte we want to populate
@@ -483,9 +501,10 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 		assert(new_page != NULL);
 
 		// Populate the pte by ensuring mask for flags and adding flags
-		*new_page = PTE_ADDR(pa) | PTE_P | perm;
+		*new_page = (pa + i * PGSIZE) | PTE_P | perm;
 	}
 }
+// Test
 
 //
 // Map the physical page 'pp' at virtual address 'va'.
@@ -520,33 +539,39 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 
 	// If it cannot be allocated return -E_NO_MEM
 	if (!p_pte)
-	{
 		return -E_NO_MEM;
-	}
-	// If the page is already present
-	else if (PTE_ADDR(*p_pte) == page2pa(pp))
-	{
-		// If the perms are diff
-		if((*p_pte & 0xfff) != perm)
-		{
-			// Set perms, could replace page2pa(pp) with PTE_ADDR(p_pte)
-			*p_pte = page2pa(pp) | perm | PTE_P;
-			tlb_invalidate(pgdir, va);
-		}
-	}
-	// Otherwise
-	else
-	{
-		// If there is a page remove it
-		if (*p_pte & PTE_P)
-			page_remove(pgdir, va);
 
-		// Set the new page in its place and increment pp_ref, invalidate
+	// If the page is already present
+	// else if (PTE_ADDR(*p_pte) == page2pa(pp))
+	// {
+	// 	// If the perms are diff
+	// 	if((*p_pte & 0xfff) != perm)
+	// 	{
+	// 		// Set perms, could replace page2pa(pp) with PTE_ADDR(p_pte)
+	// 		*p_pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
+	// 		tlb_invalidate(pgdir, va);
+	// 	}
+	// }
+	// // Otherwise
+	// else
+	// {
+	// 	// If there is a page remove it
+	// 	if (*p_pte & PTE_P)
+	// 		page_remove(pgdir, va);
+
+	// 	// Set the new page in its place and increment pp_ref, invalidate
 		
-		*p_pte = page2pa(pp) | perm | PTE_P;
-		pp->pp_ref++;
-		tlb_invalidate(pgdir, va);
-	}
+	// 	*p_pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
+	// 	pp->pp_ref++;
+	// 	tlb_invalidate(pgdir, va);
+	// }
+
+	pp->pp_ref++;
+	if(*p_pte & PTE_P)
+		page_remove(pgdir, va);
+	
+	*p_pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P;
+	tlb_invalidate(pgdir, va);
 	return 0;
 }
 
@@ -597,6 +622,7 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 // Hint: The TA solution is implemented using page_lookup,
 // 	tlb_invalidate, and page_decref.
 //
+
 void
 page_remove(pde_t *pgdir, void *va)
 {

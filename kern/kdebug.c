@@ -186,7 +186,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 
 	// If binary search succeded, set the eip_line, otherwise set -1
 	if (lline <= rline)
-		info->eip_line = (int)stabs[lline].n_desc;
+		info->eip_line = stabs[lline].n_desc;
 	else
 		return -1;
 
