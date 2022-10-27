@@ -213,7 +213,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	if (lline <= rline)
 		info->eip_line = stabs[lline].n_desc;
 	else
-		return -1;
+		info->eip_line = -1;
 
 	// Search backwards from the line number for the relevant filename
 	// stab.

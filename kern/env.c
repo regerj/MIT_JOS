@@ -6,6 +6,7 @@
 #include <inc/string.h>
 #include <inc/assert.h>
 #include <inc/elf.h>
+#include <inc/memlayout.h>
 
 #include <kern/env.h>
 #include <kern/pmap.h>
@@ -117,6 +118,24 @@ env_init(void)
 	// Set up envs array
 	// LAB 3: Your code here.
 
+	// Initial setup
+	struct Env * tail = NULL;
+
+	env_free_list = &envs[0];
+	tail = env_free_list;
+
+	envs[0].env_id = 0;
+	envs[0].env_status = ENV_FREE;
+
+	// Iterate all envs and set the values and add to the free list
+	for(size_t i = 1; i < NENV; i++)
+	{
+		envs[i].env_id = 0;
+		envs[i].env_status = ENV_FREE;
+		tail->env_link = & envs[i];
+		tail = tail->env_link;
+	}
+
 	// Per-CPU part of the initialization
 	env_init_percpu();
 }
@@ -179,6 +198,19 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
+
+	e->env_pgdir = page2kva(p);
+	p->pp_ref++;
+
+	// e->env_pgdir[PDX(UTOP)] = PADDR(envs) | PTE_P | PTE_U;
+	// e->env_pgdir[PDX(UPAGES)] = PADDR(pages) | PTE_P | PTE_U;
+	// e->env_pgdir[PDX(KSTACKTOP - KSTKSIZE)] = PADDR(bootstack) | PTE_P | PTE_W;
+	// e->env_pgdir[PDX(KERNBASE)] = 0 | PTE_P | PTE_W;
+
+	for(i = PDX(UTOP); i < NPDENTRIES; i++)
+	{
+		e->env_pgdir[i] = kern_pgdir[i];
+	}
 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
@@ -267,6 +299,22 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+
+	// Quick roundings
+	va = ROUNDDOWN(va, PGSIZE);
+	len = ROUNDUP(len, PGSIZE);
+
+	int num_pages = len / PGSIZE;
+
+	for(size_t i = 0; i < num_pages; i++)
+	{
+		struct PageInfo * pp = page_alloc(0);
+
+		if(!pp) panic("region_alloc: Failed to allocate a page\n");
+
+		if(page_insert(e->env_pgdir, pp, va + i * PGSIZE, PTE_P | PTE_U | PTE_W))
+			panic("region_alloc: Failed to insert page to va\n");
+	}
 }
 
 //
@@ -324,10 +372,46 @@ load_icode(struct Env *e, uint8_t *binary)
 
 	// LAB 3: Your code here.
 
+	// Initial declaration
+	struct Proghdr *ph;
+	struct Elf *elf_hdr = (struct Elf *)binary;
+
+	// Guard for wrong elf
+	if(elf_hdr->e_magic != ELF_MAGIC) panic("load_icode: Wrong elf detected\n");
+
+	// Load env's own cr3
+	uint32_t prev_cr3 = rcr3();
+	lcr3(PADDR(e->env_pgdir));
+
+	// Retrieve the ph
+	ph = (struct Proghdr *)(elf_hdr + elf_hdr->e_phoff);
+
+	// Iterate each ph entry
+	for(size_t i = 0; i < elf_hdr->e_phnum; i++)
+	{	
+		// Guard for non load
+		if(ph[i].p_type != ELF_PROG_LOAD)
+			continue;
+
+		// Allocate space, write all zeros, then copy in the data
+		region_alloc(e, (void *) ph[i].p_va, ph[i].p_memsz);
+		memset((void *) ph[i].p_va, 0, ph[i].p_memsz);
+		memcpy((void *) ph[i].p_va, (void *) (elf_hdr + ph[i].p_offset), ph[i].p_filesz);
+	}
+
+	// Switch back to kernel
+	lcr3(PADDR(kern_pgdir));
+
+	// Set the env entry
+	e->env_tf.tf_eip = elf_hdr->e_entry;
+
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+	
+	// Allocate a single page for stack
+	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
 }
 
 //
@@ -341,6 +425,18 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
+	struct Env * e = NULL;
+
+	// Allocate for a new env
+	int r;
+	if((r = env_alloc(&e, 0))) 
+		panic("env_create: Failed to allocate for environment with code: %e\n", r);
+
+	// Load the binary
+	load_icode(e, binary);
+
+	// Store the type passed in
+	e->env_type = type;
 }
 
 //
@@ -458,6 +554,22 @@ env_run(struct Env *e)
 
 	// LAB 3: Your code here.
 
-	panic("env_run not yet implemented");
+	//panic("env_run: Not yet implemented.\n");
+
+	// If there is a current environment and it is running, set to runnable
+	if(curenv && curenv->env_status == ENV_RUNNING)
+		curenv->env_status = ENV_RUNNABLE;
+
+	// Update the current environment and associated vlaues
+	curenv = e;
+	curenv->env_status = ENV_RUNNING;
+	curenv->env_runs++;
+
+	// Perform context switch
+	lcr3(PADDR(curenv->env_pgdir));
+	env_pop_tf(&(curenv->env_tf));
+
+	// Should never reach here, but if it does, panic
+	panic("env_run: Trap frame failed to pop\n");
 }
 
