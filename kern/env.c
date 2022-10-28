@@ -372,46 +372,77 @@ load_icode(struct Env *e, uint8_t *binary)
 
 	// LAB 3: Your code here.
 
-	// Initial declaration
-	struct Proghdr *ph;
-	struct Elf *elf_hdr = (struct Elf *)binary;
+	// Error handle some invalid parameters
+	if(!e)
+		panic("load_icode: Invalid env\n");
+	if(!binary)
+		panic("load_icode: Invalid binary\n");
+	
+	// Instantiate the elf
+	struct Elf * elf_hdr = (struct Elf *) binary;
 
-	// Guard for wrong elf
-	if(elf_hdr->e_magic != ELF_MAGIC) panic("load_icode: Wrong elf detected\n");
+	// If it goofed up, panic
+	if(elf_hdr->e_magic != ELF_MAGIC)
+		panic("load_icode: Invalid elf\n");
+	
+	// Grab the first program header and the end of the program headers
+	struct Proghdr * ph = (struct Proghdr *) ((uint8_t * ) elf_hdr + elf_hdr->e_phoff);
+	struct Proghdr * ph_end = ph + elf_hdr->e_phnum;
 
-	// Load env's own cr3
+	// Load cr3 with the environments pgdir
 	uint32_t prev_cr3 = rcr3();
 	lcr3(PADDR(e->env_pgdir));
 
-	// Retrieve the ph
-	ph = (struct Proghdr *)(elf_hdr + elf_hdr->e_phoff);
+	// // Iterate each ph entry
+	// for(size_t i = 0; i < elf_hdr->e_phnum; i++)
+	// {	
+	// 	// Guard for non load
+	// 	if(ph[i].p_type != ELF_PROG_LOAD)
+	// 		continue;
 
-	// Iterate each ph entry
-	for(size_t i = 0; i < elf_hdr->e_phnum; i++)
-	{	
-		// Guard for non load
-		if(ph[i].p_type != ELF_PROG_LOAD)
+	// 	// Allocate space, write all zeros, then copy in the data
+	// 	if(ph->p_filesz > ph->p_memsz)
+	//  		panic("kern/env.c/load_icode: attempting to copy a file larger than allocated memory\n");
+	// 	region_alloc(e, (void *) ph[i].p_va, ph[i].p_memsz);
+	// 	memset((void *) ph[i].p_va, 0, ph[i].p_memsz);
+	// 	memcpy((void *) ph[i].p_va, (void *) (elf_hdr + ph[i].p_offset), ph[i].p_filesz);
+	// }
+
+	// Iterate through the program headers
+	for( ; ph < ph_end; ph++)
+	{
+		// For each program header, if it's indicated to be loaded
+		if(ph->p_type != ELF_PROG_LOAD)
 			continue;
 
-		// Allocate space, write all zeros, then copy in the data
-		region_alloc(e, (void *) ph[i].p_va, ph[i].p_memsz);
-		memset((void *) ph[i].p_va, 0, ph[i].p_memsz);
-		memcpy((void *) ph[i].p_va, (void *) (elf_hdr + ph[i].p_offset), ph[i].p_filesz);
+		// Allocate a region from [p_va, p_va + p_memsz)
+		region_alloc(e, (void *)ph->p_va, ph->p_memsz);
+
+		// If attempt to copy more memory than is allocated for, panic
+		if(ph->p_filesz > ph->p_memsz)
+			panic("kern/env.c/load_icode: attempting to copy a file larger than allocated memory\n");
+
+		// Zero the memory from VA: [p_va, p_va + p_memsz)
+		memset((void *)ph->p_va, 0, ph->p_memsz);
+
+		// Copy over the memory from [binary + p_offset, binary + p_offset + p_filesz) to p_va
+		memcpy((void *)ph->p_va, binary + ph->p_offset, ph->p_filesz);
 	}
 
-	// Switch back to kernel
-	lcr3(PADDR(kern_pgdir));
+	// Restore prev_cr3 into cr3 register
+	lcr3(prev_cr3);
 
-	// Set the env entry
+	// Move environment trapframe eip to be the entry point defined in elf
 	e->env_tf.tf_eip = elf_hdr->e_entry;
 
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
-	
-	// Allocate a single page for stack
+
+	// Allocate a page for the USTACK
 	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
+
 }
 
 //
@@ -553,8 +584,6 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
-
-	//panic("env_run: Not yet implemented.\n");
 
 	// If there is a current environment and it is running, set to runnable
 	if(curenv && curenv->env_status == ENV_RUNNING)
