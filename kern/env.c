@@ -117,24 +117,19 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-
-	// Initial setup
-	struct Env * tail = NULL;
-
-	env_free_list = &envs[0];
-	tail = env_free_list;
-
-	envs[0].env_id = 0;
-	envs[0].env_status = ENV_FREE;
-
-	// Iterate all envs and set the values and add to the free list
-	for(size_t i = 1; i < NENV; i++)
-	{
+	size_t i;
+	for(i = NENV - 1; i >= 1; i--) {
 		envs[i].env_id = 0;
 		envs[i].env_status = ENV_FREE;
-		tail->env_link = & envs[i];
-		tail = tail->env_link;
+		envs[i].env_link = env_free_list;
+		env_free_list = &envs[i];
 	}
+
+	i = 0;
+	envs[i].env_id = 0;
+	envs[i].env_status = ENV_FREE;
+	envs[i].env_link = env_free_list;
+	env_free_list = &envs[i];
 
 	// Per-CPU part of the initialization
 	env_init_percpu();
