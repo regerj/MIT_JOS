@@ -82,6 +82,13 @@ void t_simderr_h();
 void t_syscall_h();
 void t_default_h();
 
+void hook_func()
+{
+	cprintf("Successfully hooked\n");
+	return;
+	monitor(NULL);
+}
+
 void
 trap_init(void)
 {
@@ -116,6 +123,9 @@ trap_init(void)
 	SETGATE(idt[T_MCHK], 0, GD_KT, t_mchk_h, 0);
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, t_simderr_h, 0);
 	SETGATE(idt[T_SYSCALL], 0, GD_KT, t_syscall_h, 3);
+	cprintf("Kernel identifying idt to be at address: %08x\n", idt);
+	cprintf("Kernel identifying syscall entry to be: %016x\n", idt[T_SYSCALL]);
+	cprintf("Kernel identifying function hook to be at: %08x\n", hook_func);
 	//SETGATE(idt[T_DEFAULT], 0, GD_KT, t_default_h, 0);
 	// Per-CPU setup
 	trap_init_percpu();
