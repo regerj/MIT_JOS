@@ -68,6 +68,26 @@ static const char *trapname(int trapno)
 
 // XYZ: write a function declaration here...
 // e.g., void t_divide();
+void t_divide_h();
+void t_debug_h();
+void t_nmi_h();
+void t_brkpt_h();
+void t_oflow_h();
+void t_bound_h();
+void t_illop_h();
+void t_device_h();
+void t_dblflt_h();
+void t_tss_h();
+void t_segnp_h();
+void t_stack_h();
+void t_gpflt_h();
+void t_pgflt_h();
+void t_fperr_h();
+void t_align_h();
+void t_mchk_h();
+void t_simderr_h();
+void t_syscall_h();
+void t_default_h();
 
 void
 trap_init(void)
@@ -84,7 +104,26 @@ trap_init(void)
      *
      */
 	// LAB 3: Your code here.
-
+	SETGATE(idt[T_DIVIDE], 0, GD_KT, t_divide_h, 0);
+	SETGATE(idt[T_DEBUG], 0, GD_KT, t_debug_h, 0);
+	SETGATE(idt[T_DEBUG], 0, GD_KT, t_nmi_h, 0);
+	SETGATE(idt[T_BRKPT], 0, GD_KT, t_brkpt_h, 3);
+	SETGATE(idt[T_OFLOW], 0, GD_KT, t_oflow_h, 0);
+	SETGATE(idt[T_BOUND], 0, GD_KT, t_bound_h, 0);
+	SETGATE(idt[T_ILLOP], 0, GD_KT, t_illop_h, 0);
+	SETGATE(idt[T_DEVICE], 0, GD_KT, t_device_h, 0);
+	SETGATE(idt[T_DBLFLT], 0, GD_KT, t_dblflt_h, 0);
+	SETGATE(idt[T_TSS], 0, GD_KT, t_tss_h, 0);
+	SETGATE(idt[T_SEGNP], 0, GD_KT, t_segnp_h, 0);
+	SETGATE(idt[T_STACK], 0, GD_KT, t_stack_h, 0);
+	SETGATE(idt[T_GPFLT], 0, GD_KT, t_gpflt_h, 0);
+	SETGATE(idt[T_PGFLT], 0, GD_KT, t_pgflt_h, 0);
+	SETGATE(idt[T_FPERR], 0, GD_KT, t_fperr_h, 0);
+	SETGATE(idt[T_ALIGN], 0, GD_KT, t_align_h, 0);
+	SETGATE(idt[T_MCHK], 0, GD_KT, t_mchk_h, 0);
+	SETGATE(idt[T_SIMDERR], 0, GD_KT, t_simderr_h, 0);
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, t_syscall_h, 3);
+	//SETGATE(idt[T_DEFAULT], 0, GD_KT, t_default_h, 0);
 	// Per-CPU setup
 	trap_init_percpu();
 }
@@ -188,6 +227,24 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+	switch(tf->tf_trapno){
+		case T_PGFLT:
+			page_fault_handler(tf);
+			return;
+		case T_BRKPT:
+			monitor(tf);
+			return;
+		case T_SYSCALL:
+			tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax, 
+											tf->tf_regs.reg_edx,
+											tf->tf_regs.reg_ecx,
+											tf->tf_regs.reg_ebx,
+											tf->tf_regs.reg_edi,
+											tf->tf_regs.reg_esi);
+			return;
+		default:
+			break;
+	}
 
 	// Handle spurious interrupts
 	// The hardware sometimes raises these because of noise on the
@@ -283,6 +340,8 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+	if(!(tf->tf_cs & 3))
+		panic("page_fault_handler: Unhandled page fault in the Kernel\n");
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
