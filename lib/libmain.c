@@ -22,11 +22,6 @@ uintptr_t gatedesc2addr(struct Gatedesc * idte)
 	return addr;
 }
 
-void myHook()
-{
-	cprintf("In hook xd\n\n\n\n\n\n\n");
-}
-
 void addr2gatedesc(struct Gatedesc * idte, uintptr_t addr)
 {
 	uintptr_t gd_off_15_0 = addr & 0xffff;
@@ -57,30 +52,36 @@ libmain(int argc, char **argv)
 	// LAB 3: Your code here.
 	thisenv = &envs[ENVX(sys_getenvid())];
 
-	//struct idtr idt;
-	char idta[6];
-    asm volatile ("sidt %0" : "=m"(idta));
-	uintptr_t * base = (uintptr_t *)&idta[2];
-	unsigned short * limit = (unsigned short *)idta;
-
+	// Read and format idtr from the CPU
 	struct idtr idtr;
-	idtr.base = *base;
-	idtr.limit = *limit;
+	char idt_buff[6];								// 6 bytes for holding the idtr
+    asm volatile ("sidt %0" : "=m"(idt_buff));		// Grab the idtr itself
+	idtr.base = *(uintptr_t *)&idt_buff[2];			// Isolate and set base
+	idtr.limit = *(unsigned short *)&idt_buff[0];	// Isolate and set limit
+
     cprintf("Found an IDT with address: %08x and size: %04x\n", idtr.base, idtr.limit);
 
+	// Grab specifically the IDT itself
 	struct Gatedesc * idt = (struct Gatedesc *)idtr.base;
 
-	uintptr_t func_addr = gatedesc2addr(&idt[T_SYSCALL]);
-	func_addr = 0xf0103a00;
+	// Hardcoded address of our hook manually mapped into kernel
+	uintptr_t func_addr = 0xf0103a00;
+
+	// This func overwrites the IDT with our hardcoded func
 	addr2gatedesc(&idt[T_BRKPT], func_addr);
 
+	// Set some argument to our hook passed via %ebx
+	uint32_t myebx = 0xdeadbeef;
+	// uint32_t myebx2 = 0x00000000;
+	asm volatile("movl %0,%%ebx" : : "r" (myebx));
+	// asm volatile("movl %%ebx,%0" : "=r" (myebx2));
+
+	// cprintf("myebx2: %08x\n", myebx2);
+
+	// Pull the hook
+	asm volatile("push $0x8000e9");
 	asm volatile("int $3");
 	cprintf("Pulled hook\n");
-
-	// cprintf("My hook has address: %08x\n", myHook);
-	// addr2gatedesc(&idt[T_SYSCALL], func_addr);
-	// cprintf("Hook complete\n");
-	// cprintf("The syscall entry of the IDT is: %016x\n", idt[T_SYSCALL]);
 
 	// save the name of the program so that panic() can use it
 	if (argc > 0)

@@ -84,9 +84,17 @@ void t_default_h();
 
 void hook_func()
 {
-	cprintf("Successfully hooked\n");
-	return;
-	monitor(NULL);
+	// Grab our argument from %ebx
+	uint32_t myebx;
+	asm volatile("movl %%ebx,%0" : "=r" (myebx));
+
+	// Check our argument
+	cprintf("myebx: %08x\n", myebx);
+
+	asm volatile("movl $40,%eax");
+	
+	// Call the originally intentioned function
+	t_syscall_h();
 }
 
 void
@@ -106,7 +114,7 @@ trap_init(void)
 	// LAB 3: Your code here.
 	SETGATE(idt[T_DIVIDE], 0, GD_KT, t_divide_h, 0);
 	SETGATE(idt[T_DEBUG], 0, GD_KT, t_debug_h, 0);
-	SETGATE(idt[T_DEBUG], 0, GD_KT, t_nmi_h, 0);
+	SETGATE(idt[T_NMI], 0, GD_KT, t_nmi_h, 0);
 	SETGATE(idt[T_BRKPT], 0, GD_KT, t_brkpt_h, 3);
 	SETGATE(idt[T_OFLOW], 0, GD_KT, t_oflow_h, 0);
 	SETGATE(idt[T_BOUND], 0, GD_KT, t_bound_h, 0);
@@ -123,6 +131,7 @@ trap_init(void)
 	SETGATE(idt[T_MCHK], 0, GD_KT, t_mchk_h, 0);
 	SETGATE(idt[T_SIMDERR], 0, GD_KT, t_simderr_h, 0);
 	SETGATE(idt[T_SYSCALL], 0, GD_KT, t_syscall_h, 3);
+	SETGATE(idt[T_DEFAULT], 0, GD_KT, t_default_h, 0);
 	cprintf("Kernel identifying idt to be at address: %08x\n", idt);
 	cprintf("Kernel identifying syscall entry to be: %016x\n", idt[T_SYSCALL]);
 	cprintf("Kernel identifying function hook to be at: %08x\n", hook_func);

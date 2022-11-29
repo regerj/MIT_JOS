@@ -47,7 +47,7 @@
  * Lab 3: Your code here for generating entry points for the different traps.
  */
 TRAPHANDLER_NOEC(t_divide_h, T_DIVIDE)
-TRAPHANDLER_NOEC(t_degub_h, T_DEBUG)
+TRAPHANDLER_NOEC(t_debug_h, T_DEBUG)
 TRAPHANDLER_NOEC(t_nmi_h, T_NMI)
 TRAPHANDLER_NOEC(t_brkpt_h, T_BRKPT)
 TRAPHANDLER_NOEC(t_oflow_h, T_OFLOW)
@@ -65,7 +65,7 @@ TRAPHANDLER(t_align_h, T_ALIGN)
 TRAPHANDLER_NOEC(t_mchk_h, T_MCHK)
 TRAPHANDLER_NOEC(t_simderr_h, T_SIMDERR)
 TRAPHANDLER_NOEC(t_syscall_h, T_SYSCALL)
-TRAPHANDLER_NOEC(t_defualt_h, T_DEFAULT)
+TRAPHANDLER_NOEC(t_default_h, T_DEFAULT)
 
 // HINT 1 : TRAPHANDLER_NOEC(t_divide, T_DIVIDE);
 //          Do something like this if there is no error code for the trap
