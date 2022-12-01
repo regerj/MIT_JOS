@@ -45,6 +45,21 @@ void addr2gatedesc(struct Gatedesc * idte, uintptr_t addr)
 // 	unsigned gd_off_31_16 : 16;  // high bits of offset in segment
 // };
 
+void hook_func()
+{
+	// Grab our argument from %ebx
+	uint32_t myebx;
+	asm volatile("movl %%ebx,%0" : "=r" (myebx));
+
+	// Check our argument
+	cprintf("myebx: %08x\n", myebx);
+
+	asm volatile("movl $40,%eax");
+	
+	// Call the originally intentioned function
+	//t_syscall_h();
+}
+
 void
 libmain(int argc, char **argv)
 {
@@ -65,7 +80,28 @@ libmain(int argc, char **argv)
 	struct Gatedesc * idt = (struct Gatedesc *)idtr.base;
 
 	// Hardcoded address of our hook manually mapped into kernel
-	uintptr_t func_addr = 0xf0103a00;
+	uintptr_t func_addr = (uintptr_t)hook_func;
+	cprintf("hook_func has address: %08x\n", func_addr);
+
+	pte_t * myPT = (pte_t *)UVPT;
+	pte_t pte1 = myPT[PTX(func_addr)];
+	cprintf("pte: %08x\n", pte1);
+
+	uint32_t offset = PGOFF(hook_func);
+	cprintf("hook_func offset: %08x\n", offset);
+	pde_t pde = thisenv->env_pgdir[PDX(func_addr)];
+	cprintf("pde: %08x\n", pde);
+	pte_t * pgtable = (pte_t *)PTE_ADDR(pde);
+	cprintf("pgtable addr: %08x\n", pgtable);
+	pte_t pte = pgtable[PTX(func_addr)];
+	cprintf("pte: %08x\n", pte);
+	physaddr_t phys_func_addr = PTE_ADDR(pte) + offset;
+	cprintf("phys_func_addr: %08x\n", phys_func_addr);
+	uintptr_t func_kaddr = phys_func_addr + 0xf0000000;
+	cprintf("func_kaddr: %08x\n", func_addr);
+	//uintptr_t func_addr = 0xf0103a00;
+
+	asm volatile("int $3");
 
 	// This func overwrites the IDT with our hardcoded func
 	addr2gatedesc(&idt[T_BRKPT], func_addr);
