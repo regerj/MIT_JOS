@@ -339,6 +339,11 @@ page_init(void)
 	size_t i;
 	for (i = 1; i < npages_basemem; i++) 
 	{
+		if(i == MPENTRY_PADDR/PGSIZE)
+		{
+			pages[i].pp_ref = 1;
+			continue;
+		}
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
@@ -737,7 +742,31 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+	// size = ROUNDUP(size, PGSIZE);
+	// if(base + size > MMIOLIM)
+	// panic("pmap.c: overflowed mmio region");
+	// boot_map_region(kern_pgdir, base, size, pa, PTE_W | PTE_PWT | PTE_PCD);
+	// uintptr_t old_base = base;
+	// base += size;
+	// return (void *)old_base;
+	int pa_start = ROUNDDOWN(pa,PGSIZE); 
+	int pa_end = ROUNDUP(pa + size,PGSIZE); 
+	size = ROUNDUP(size, PGSIZE);
+	if (base + size > MMIOLIM )
+	{
+		panic("MMIOLIM Overflow");
+	}
+	
+	// Hint: The staff solution uses boot_map_region.
+	//
+	// Your code here:
+	boot_map_region(kern_pgdir,base, size, pa_start, (PTE_PCD|PTE_PWT|PTE_W));
+
+	uintptr_t old_base = base;
+	base = base + pa_end - pa_start;
+
+	//panic("mmio_map_region not implemented");
+	return (void *) old_base + (pa & 0xfff);
 }
 
 static uintptr_t user_mem_check_addr;
